@@ -103,7 +103,7 @@ func collectResults(results chan ScrapeResult, cache *WordFreqCache, finished ch
 		result, more := <-results
 		cache.Set(result.url, result.wq)
 		if more {
-			fmt.Println("done", result.url, result.wq[len(result.wq)-3:len(result.wq)])
+			fmt.Println("done", result.url, result.wq[len(result.wq)-5:len(result.wq)])
 		} else {
 			finished <- struct{}{}
 		}
@@ -154,7 +154,7 @@ func getWordFreq(res *http.Response) []wordCount {
 			text = strings.ToLower(text)
 			fields := strings.Fields(text)
 			for _, field := range fields {
-				field = strings.Trim(field, ".,„“”'\";:()[]{}")
+				field = strings.Trim(field, ".,„“”'\";:()[]{}–↑")
 				if field != "" {
 					wordFreq[field]++
 				}
