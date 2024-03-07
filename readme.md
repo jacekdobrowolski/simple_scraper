@@ -1,4 +1,6 @@
-# Simple scrapper
+[![Go](https://github.com/jacekdobrowolski/simple_scraper/actions/workflows/go.yml/badge.svg)](https://github.com/jacekdobrowolski/simple_scraper/actions/workflows/go.yml)
+
+# Simple scraper
 
 Includes concurrency and simple cache.
 Made as an interview assignment.
