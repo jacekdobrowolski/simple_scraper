@@ -12,6 +12,13 @@ import (
 	"golang.org/x/net/html"
 )
 
+type Scraper struct {
+	httpClient *http.Client
+	cache      *WordFreqCache
+	swg        *SemaphoredWaitGroup
+	results    chan ScrapeResult
+}
+
 type wordCount struct {
 	word  string
 	count int
@@ -78,30 +85,33 @@ func main() {
 		"https://pl.wikipedia.org/wiki/Polska",
 		"https://pl.wikipedia.org/wiki/Polska",
 	}
-	httpClient := &http.Client{Timeout: 10 * time.Second}
-	scrape(urls, httpClient)
+
+	s := Scraper{
+		httpClient: &http.Client{Timeout: 10 * time.Second},
+		swg:        NewSemaphoredWaitGroup(2),
+		results:    make(chan ScrapeResult, len(urls)),
+		cache:      NewWordFreqCache(),
+	}
+	s.scrape(urls)
 }
 
-func scrape(urls []string, httpClient *http.Client) {
-	swg := NewSemaphoredWaitGroup(2)
-	results := make(chan ScrapeResult, len(urls))
+func (s *Scraper) scrape(urls []string) {
 	collectingResultsFinished := make(chan struct{})
-	cache := NewWordFreqCache()
-	go collectResults(results, cache, collectingResultsFinished)
+	go s.collectResults(collectingResultsFinished)
 
 	for _, url := range urls {
-		swg.Add(1)
-		go scrapeUrl(url, httpClient, cache, swg, results)
+		s.swg.Add(1)
+		go s.scrapeUrl(url)
 	}
-	swg.Wait()
-	close(results)
+	s.swg.Wait()
+	close(s.results)
 	<-collectingResultsFinished
 }
 
-func collectResults(results chan ScrapeResult, cache *WordFreqCache, finished chan struct{}) {
+func (s *Scraper) collectResults(finished chan struct{}) {
 	for {
-		result, more := <-results
-		cache.Set(result.url, result.wq)
+		result, more := <-s.results
+		s.cache.Set(result.url, result.wq)
 		if more {
 			fmt.Println("done", result.url, result.wq[len(result.wq)-5:len(result.wq)])
 		} else {
@@ -110,12 +120,12 @@ func collectResults(results chan ScrapeResult, cache *WordFreqCache, finished ch
 	}
 }
 
-func scrapeUrl(url string, httpClient *http.Client, cache *WordFreqCache, swg *SemaphoredWaitGroup, results chan ScrapeResult) {
-	defer swg.Done()
-	cachedResult, ok := cache.Get(url)
+func (s *Scraper) scrapeUrl(url string) {
+	defer s.swg.Done()
+	cachedResult, ok := s.cache.Get(url)
 	if ok {
 		fmt.Println("from cache", url)
-		results <- ScrapeResult{url, cachedResult}
+		s.results <- ScrapeResult{url, cachedResult}
 		return
 	}
 	req, err := http.NewRequest("GET", url, nil)
@@ -123,13 +133,13 @@ func scrapeUrl(url string, httpClient *http.Client, cache *WordFreqCache, swg *S
 		log.Fatal(err)
 	}
 	fmt.Println("requesting", url)
-	res, err := httpClient.Do(req)
+	res, err := s.httpClient.Do(req)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	result := getWordFreq(res)
-	results <- ScrapeResult{url, result}
+	s.results <- ScrapeResult{url, result}
 }
 
 func getWordFreq(res *http.Response) []wordCount {
