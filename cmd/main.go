@@ -90,7 +90,6 @@ func (s *Scraper) scrape(urls []string) {
 func (s *Scraper) collectResults(finished chan struct{}) {
 	for {
 		result, more := <-s.results
-		s.cache.Set(result.url, result.wq)
 		if more {
 			fmt.Println("done", result.url, result.wq[len(result.wq)-5:len(result.wq)])
 		} else {
@@ -118,6 +117,7 @@ func (s *Scraper) scrapeUrl(url string) {
 	}
 
 	result := getWordFreq(res)
+	s.cache.Set(url, result)
 	s.results <- ScrapeResult{url, result}
 }
 
