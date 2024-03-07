@@ -5,8 +5,19 @@
 Includes concurrency and simple cache.
 Made as an interview assignment.
 
+Requested urls:
+```
+https://pl.wikipedia.org/wiki/Polska
+https://pl.wikipedia.org/wiki/Niemcy
+https://pl.wikipedia.org/wiki/Francja
+https://pl.wikipedia.org/wiki/Polska
+https://pl.wikipedia.org/wiki/Polska
+https://pl.wikipedia.org/wiki/Polska
+https://pl.wikipedia.org/wiki/Polska
+```
+
 Output:
-```bash
+```
 requesting https://pl.wikipedia.org/wiki/Niemcy
 requesting https://pl.wikipedia.org/wiki/Polska
 requesting https://pl.wikipedia.org/wiki/Francja
