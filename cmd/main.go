@@ -26,7 +26,7 @@ func main() {
 	}
 
 	s, ctx := NewScraper(context.Background(), &http.Client{Timeout: 10 * time.Second}, 2)
-	s.scrape(urls)
+	s.scrapeAll(urls)
 	<-ctx.Done()
 }
 
@@ -58,20 +58,20 @@ func NewScraper(ctx context.Context, httpClient *http.Client, maxConnections int
 	}, ctx
 }
 
-func (s *Scraper) scrape(urls []string) {
-	collectingResultsFinished := make(chan struct{})
-	go s.collectResults(collectingResultsFinished)
+func (s *Scraper) scrapeAll(urls []string) {
+	collectingResultsDone := make(chan struct{})
+	go s.collectResults(collectingResultsDone)
 
 	for _, url := range urls {
 		url := url
-		s.group.Go(func() error { return s.scrapeUrl(url) })
+		s.group.Go(func() error { return s.scrape(url) })
 	}
 	err := s.group.Wait()
 	if err != nil {
 		log.Fatal(err)
 	}
 	close(s.results)
-	<-collectingResultsFinished
+	<-collectingResultsDone
 }
 
 func (s *Scraper) collectResults(finished chan struct{}) {
@@ -85,7 +85,7 @@ func (s *Scraper) collectResults(finished chan struct{}) {
 	}
 }
 
-func (s *Scraper) scrapeUrl(url string) error {
+func (s *Scraper) scrape(url string) error {
 	cachedResult, ok := s.cache.Get(url)
 	if ok {
 		fmt.Println("from cache", url)
