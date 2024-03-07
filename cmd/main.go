@@ -9,12 +9,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/jacekdobrowolski/simple_scrapper/pkg/cache"
 	"golang.org/x/net/html"
 )
 
 type Scraper struct {
 	httpClient *http.Client
-	cache      *WordFreqCache
+	cache      *cache.Cache[[]wordCount]
 	swg        *SemaphoredWaitGroup
 	results    chan ScrapeResult
 }
@@ -27,28 +28,6 @@ type wordCount struct {
 type ScrapeResult struct {
 	url string
 	wq  []wordCount
-}
-
-type WordFreqCache struct {
-	urlMap map[string][]wordCount
-	mux    sync.RWMutex
-}
-
-func (c *WordFreqCache) Set(url string, wordFreq []wordCount) {
-	defer c.mux.Unlock()
-	c.mux.Lock()
-	c.urlMap[url] = wordFreq
-}
-
-func (c *WordFreqCache) Get(url string) ([]wordCount, bool) {
-	defer c.mux.RUnlock()
-	c.mux.RLock()
-	wordFreq, ok := c.urlMap[url]
-	return wordFreq, ok
-}
-
-func NewWordFreqCache() *WordFreqCache {
-	return &WordFreqCache{urlMap: make(map[string][]wordCount)}
 }
 
 type SemaphoredWaitGroup struct {
@@ -90,7 +69,7 @@ func main() {
 		httpClient: &http.Client{Timeout: 10 * time.Second},
 		swg:        NewSemaphoredWaitGroup(2),
 		results:    make(chan ScrapeResult, len(urls)),
-		cache:      NewWordFreqCache(),
+		cache:      cache.New[[]wordCount](),
 	}
 	s.scrape(urls)
 }
